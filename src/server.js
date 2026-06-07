@@ -2,26 +2,26 @@
 
 // src/server.js
 import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import authRoutes from './routes/auth.routes.js';
+import { buildApp } from './app.js';
+import { createRedisConnection } from './config/redis.js';
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 
-// === Middlewares Globales ===
-app.use(express.json()); 
-app.use(cookieParser()); 
-app.use(cors({
-    origin: process.env.FRONTEND_URL, // <--  LEE EL .env
-    credentials: true 
-}));
+const bootstrapServer = async () => {
+    try {
+        //Iniciamos la conexión a Redis antes de arrancar el servidor
+        const redisClient = await createRedisConnection();// (await)Esperamos a que la conexión se establezca antes de continuar
 
-// === Rutas de la API ===
-app.use('/api/auth', authRoutes);
+        // Construimos la aplicación Express inyectando el cliente de Redis
+        const app = buildApp(redisClient);
 
-// === Inicialización ===
-app.listen(PORT, () => {
-    console.log(`BFF (Middle-end) corriendo exitosamente en http://localhost:${PORT}`);
-});
+        // Levantamos el servidor
+        app.listen(PORT, () => {
+            console.log(`BFF (Middle-end) corriendo exitosamente en http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error('Error al arrancar el servidor:', error);
+    }
+}
+
+bootstrapServer();
