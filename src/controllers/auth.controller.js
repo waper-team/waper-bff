@@ -33,13 +33,25 @@ export const login = async (req, res) => {
 
 // Controlador para cerrar sesión
 export const logout = (req, res) => {
-    // Sobrescribimos la cookie con una fecha de expiración inmediata
-    res.clearCookie('access_token', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-    });
-    return res.status(200).json({ message: "Sesión cerrada correctamente" });
+    try {
+        const token = req.cookies.access_token;
+        if (token) {
+            const redisClient = req.redis; // Accedemos al cliente de Redis inyectado
+            await redis.setEX(`blacklist:${token}`, 86400, "revoked") // Expira en 24 horas (86400 segundos)
+            //redisClient.set(`blacklist:${token}`, "revoked", 'EX', 60 * 60 * 24); // Expira en 24 horas (en segundos)
+        }
+
+        res.clearCookie('access_token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict'
+        });
+
+        return res.status(200).json({ message: "Sesión cerrada y token revocado" });
+
+    } catch (error) {
+        return res.status(500).json({ message: "Error interno al cerrar sesión" });
+    }
 };
 
 // Controlador de prueba para verificar que el BFF puede leer la cookie correctamente
@@ -52,8 +64,8 @@ export const testProtectedResource = (req, res) => {
     }
 
     // Si la cookie existe, respondemos con éxito
-    return res.status(200).json({ 
+    return res.status(200).json({
         message: "¡Éxito! El BFF logró leer la cookie de forma segura.",
-        token_recibido: token 
+        token_recibido: token
     });
 };
