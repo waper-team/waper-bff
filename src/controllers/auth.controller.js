@@ -32,13 +32,16 @@ export const login = async (req, res) => {
 };
 
 // Controlador para cerrar sesión
-export const logout = (req, res) => {
+export const logout = async (req, res) => {
     try {
         const token = req.cookies.access_token;
+        
         if (token) {
-            const redisClient = req.redis; // Accedemos al cliente de Redis inyectado
-            await redis.setEX(`blacklist:${token}`, 86400, "revoked") // Expira en 24 horas (86400 segundos)
-            //redisClient.set(`blacklist:${token}`, "revoked", 'EX', 60 * 60 * 24); // Expira en 24 horas (en segundos)
+            // 1. EXTRAEMOS LA CONEXIÓN (¡Esta es la línea que falta o está mal ubicada!)
+            const redis = req.redis; 
+            
+            // 2. AHORA SÍ LA USAMOS
+            await redis.setEx(`blacklist:${token}`, 86400, "revoked");
         }
 
         res.clearCookie('access_token', {
@@ -48,8 +51,8 @@ export const logout = (req, res) => {
         });
 
         return res.status(200).json({ message: "Sesión cerrada y token revocado" });
-
     } catch (error) {
+        console.error("🔴 ERROR REAL EN LOGOUT:", error);
         return res.status(500).json({ message: "Error interno al cerrar sesión" });
     }
 };
