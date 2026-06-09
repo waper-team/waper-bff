@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { login } from '../controllers/auth.controller.js';
 import { testProtectedResource } from '../controllers/auth.controller.js';
 
-const router = Router();
+export const router = Router();
 
 // Endpoint: POST http://localhost:3000/api/auth/login
 router.post('/login', login);
