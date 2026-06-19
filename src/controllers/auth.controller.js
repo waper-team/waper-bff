@@ -1,22 +1,24 @@
 import { loginService } from '../services/auth.service.js';
+import * as authService from '../services/auth.service.js';
 
 export const login = async (req, res) => {
     try {
-        // 1. Recibe los datos que el front envia en el formulario
+        // Recibe los datos que el front envia en el formulario
         const { email, password } = req.body;
 
-        // 2. Llama al servicio (No le importa si es el mock o el backend)
+        //Llama al servicio (No le importa si es el mock o el backend)
         const data = await loginService(email, password);
 
-        // 3. INYECCIÓN DE SEGURIDAD: Guarda el token en la cookie
+        //Guarda el token en la cookie
         res.cookie('access_token', data.token, {
-            httpOnly: true, // React no puede leer esto (protección contra XSS)
-            secure: process.env.NODE_ENV === 'production', // Solo HTTPS en producción
+            httpOnly: true, //protección contra XSS
+            secure: process.env.NODE_ENV === 'production', 
             sameSite: 'strict', // Protección contra ataques CSRF
             maxAge: 1000 * 60 * 60 * 24 // Expira en 1 día (en milisegundos)
         });
 
-        // 4. Le responde a React SOLO con los datos del usuario y el rol
+        // Le responde a React SOLO con los datos del usuario y el rol
+        console.log("🟢 EndPoint POST /api/auth/login funcionando bien"); //Borrar despues de pruebas
         res.status(200).json({
             message: "Autenticación exitosa",
             user: data.user
@@ -25,21 +27,35 @@ export const login = async (req, res) => {
     } catch (error) {
         // Si el servicio lanza el throw new Error("Credenciales inválidas...")
         // el catch lo atrapa y le avisa al frontend con un código 401
+        console.error("Error en authController.login:", error); //Borrar despues de pruebas
         res.status(401).json({
             message: error.message
         });
     }
 };
 
-// Controlador para cerrar sesión
-export const logout = (req, res) => {
-    // Sobrescribimos la cookie con una fecha de expiración inmediata
-    res.clearCookie('access_token', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-    });
-    return res.status(200).json({ message: "Sesión cerrada correctamente" });
+export const logout = async (req, res) => {
+    try {
+        // Extraemos el token de la cookie
+        const token = req.cookies.access_token;
+        
+        if (!token) {
+            return res.status(400).json({ message: "No hay una sesión activa para cerrar" });
+        }
+
+        //Enviamos el token a la lista negra de Redis
+        await authService.blacklistToken(token);
+
+        // Destruimos la cookie en el navegador del usuario
+        res.clearCookie('access_token');
+
+        console.log("🟢 EndPoint POST /api/auth/logout funcionando bien"); //Borrar despues de pruebas
+        return res.status(200).json({ message: "Cierre de sesión exitoso. Cookie eliminada." });
+
+    } catch (error) {
+        console.error("Error en authController.logout:", error);
+        return res.status(500).json({ message: "Error interno al cerrar la sesión" });
+    }
 };
 
 // Controlador de prueba para verificar que el BFF puede leer la cookie correctamente

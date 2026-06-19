@@ -3,11 +3,12 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
+import redisClient from './config/redis.js'; // Importamos el cliente de Redis
 
 // La función constructora recibe el cliente de Redis como parámetro
 export const buildApp = () => {
     const app = express();
-
+    
     // === Middlewares Globales ===
     app.use(express.json());
     app.use(cookieParser());
@@ -18,10 +19,15 @@ export const buildApp = () => {
         credentials: true // Para que el navegador permita el envío de cookies
     }));
 
+    app.use((req, res, next) => {
+        req.redisClient = redisClient; // Agregamos el cliente de Redis al objeto req para que esté disponible en los controladores
+        next();
+    });
+
     // === Rutas de la API ===
     // Ruta de autenticación (login, logout, etc.)
     app.use('/api/auth', authRoutes);
-    // Registrar el nuevo endpoint de usuarios
+    // Registrar endpoints de usuarios
     app.use('/api/users', userRoutes);
 
     return app;
