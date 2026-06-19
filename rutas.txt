@@ -1,0 +1,42 @@
+Post api/users
+
+ name
+username
+ email
+
+ Post api/login -> Usado por el login para autenticar al usuario y obtener el token -> Ya implementado
+
+Get api/users/:id  -> Usado por el profile para mostrar su info   
+name
+username
+email
+bio
+profileImage
+interests (array de strings)
+
+Get api/users/:id/interests -> Usado por el profile para mostrar sus intereses
+Devuelve un array de strings con los intereses del usuario
+
+Put api/users/:id -> Usado por el profile para actualizar su info (name, username, email, password)
+name
+username
+email
+bio
+profileImage
+interests (array de strings)
+
+
+Get api/users/:id/interests -> Usado por el profile para mostrar sus intereses
+ Devuelve un array de strings con los intereses del usuario
+
+ Put api/users/:id -> Usado por el profile para actualizar su info (name, username, email, password)
+name
+username
+email
+bio
+profileImage
+interests (array de strings)
+
+Get api/users/:id/interests -> Apunta a redis para traer los intereses
+
+
