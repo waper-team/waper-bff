@@ -2,61 +2,6 @@ import redisClient from '../config/redis.js';
 import jwt from 'jsonwebtoken';
 import { mockDatabase } from './user.service.js';
 
-/*
-export const loginService = async (email, password) => {
-
-    const useMock = process.env.USE_MOCK === 'true';
-
-    // EL SIMULADOR (Mock) 
-    if (useMock) {
-        console.log("🟡 ALERTA: Usando Backend Simulado (Mock)");
-        await new Promise(resolve => setTimeout(resolve, 800)); // Delay simulado
-
-        if (email === "said@waper.app" && password === "123456") {
-            
-            // Preparamos el payload (los datos del usuario para el token)
-            const payload = {
-                id: "6a26cdc0e953d58f42ac971e",
-                role: "STUDENT"
-            };
-
-            // Generamos el token válido
-            const realToken = jwt.sign(
-                payload, 
-                process.env.JWT_SECRET || 'secret_key_waper', 
-                { expiresIn: '1h' }
-            );
-
-            return {
-                token: realToken, // Asignamos la variable real
-                user: {
-                    id: "6a26cdc0e953d58f42ac971e",
-                    name: "Said",
-                    role: "STUDENT"
-                }
-            };
-        }
-        throw new Error("Credenciales inválidas (Mock)");
-    }
-
-    // === LA CONEXIÓN REAL cuando provenga el token del backend ===
-    console.log("🟢 Conectando con Spring Boot real...");
-    const backendUrl = process.env.BACKEND_URL;
-    console.log("URL LEÍDA DEL .ENV:", backendUrl); // <-- Agrega esto
-    const response = await fetch(`${backendUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-    });
-
-    if (!response.ok) {
-        throw new Error("Credenciales inválidas en el servidor central");
-    }
-
-    return await response.json();
-};
-*/
-
 export const loginService = async (email, password) => {
     const useMock = process.env.USE_MOCK === 'true';
 
@@ -103,10 +48,10 @@ export const loginService = async (email, password) => {
     // Conexion real con el backend
     console.log("🟢 Conectando con Spring Boot real...");
     const backendUrl = process.env.BACKEND_URL;
-    const response = await fetch(`${backendUrl}/api/auth/login`, {
+    const response = await fetch(`${backendUrl}/api/public/auth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ username: email, password })
     });
 
     if (!response.ok) {
