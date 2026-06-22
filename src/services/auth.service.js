@@ -51,11 +51,12 @@ export const loginService = async (email, password) => {
     const response = await fetch(`${backendUrl}/api/public/auth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: email, password })
+        body: JSON.stringify({ email, password })
     });
 
     if (!response.ok) {
-        throw new Error("Credenciales inválidas en el servidor central");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Credenciales inválidas");
     }
 
     return await response.json();

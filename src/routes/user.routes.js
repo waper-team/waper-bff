@@ -8,7 +8,7 @@ const router = Router();
 router.post('/', createUserProfile);
 
 // Protegemos las rutas de usuario con el middleware de autenticación
-//router.use(verifyToken);
+router.use(verifyToken);
 
 //EndPoint Get http://localhost:3000/api/users/:id
 router.get('/:id', getUserProfile);

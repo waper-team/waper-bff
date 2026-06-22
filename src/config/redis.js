@@ -1,5 +1,6 @@
 import { createClient } from 'redis';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 const OFFLINE_MODE = process.env.OFFLINE_MODE === 'true';
@@ -7,41 +8,75 @@ const OFFLINE_MODE = process.env.OFFLINE_MODE === 'true';
 let redisClient;
 
 if (OFFLINE_MODE) {
-    console.log('⚠️ MODO OFFLINE ACTIVADO: Simulando Redis. Trabajando sin internet...');
-    
-    // Creamos un "Doble de Acción" que engaña a todo tu código
-    redisClient = {
-        get: async (key) => null,               // Siempre simula un Cache Miss y deja pasar en la lista negra
-        setEx: async (key, time, value) => 'OK', // Finge que guardó el dato exitosamente
-        quit: async () => true,                 // Cierra sin errores
-        isOpen: true                            // Le miente al Graceful Shutdown para que no falle
+    console.log('MODO OFFLINE ACTIVADO: usando Redis en memoria.');
+
+    const memoryStore = new Map();
+
+    const getEntry = (key) => {
+        const entry = memoryStore.get(key);
+
+        if (!entry) return null;
+        if (entry.expiresAt !== null && entry.expiresAt <= Date.now()) {
+            memoryStore.delete(key);
+            return null;
+        }
+
+        return entry.value;
     };
 
+    redisClient = {
+        get: async (key) => getEntry(key),
+        setEx: async (key, seconds, value) => {
+            memoryStore.set(key, {
+                value,
+                expiresAt: Date.now() + Number(seconds) * 1000,
+            });
+            return 'OK';
+        },
+        del: async (...keys) => {
+            let deleted = 0;
+            keys.flat().forEach((key) => {
+                if (memoryStore.delete(key)) deleted += 1;
+            });
+            return deleted;
+        },
+        ping: async () => 'PONG',
+        quit: async () => {
+            memoryStore.clear();
+            redisClient.isOpen = false;
+            return 'OK';
+        },
+        isOpen: true,
+    };
 } else {
-    // ==========================================
-    // 🌐 TU CÓDIGO ORIGINAL DE CONEXIÓN REAL
-    // ==========================================
     redisClient = createClient({
+        username: process.env.REDIS_USERNAME || 'default',
         password: process.env.REDIS_PASSWORD,
         socket: {
             host: process.env.REDIS_HOST,
-            port: process.env.REDIS_PORT
-        }
+            port: Number(process.env.REDIS_PORT),
+            tls: process.env.REDIS_TLS === 'true',
+            connectTimeout: 10000,
+            reconnectStrategy: (retries) => {
+                if (retries >= 3) {
+                    return new Error('No se pudo conectar con Redis');
+                }
+                return Math.min(retries * 500, 2000);
+            },
+        },
     });
 
-    redisClient.on('error', (err) => console.error('Error en Redis:', err));
-    
-    // Conectamos (Esto es lo que bloquea tu app si no hay internet)
+    redisClient.on('error', (error) => {
+        console.error('Error en Redis:', error.message);
+    });
+
     await redisClient.connect();
-    console.log('🟢 Conectado exitosamente a Redis Cloud');
+    console.log('Conectado exitosamente a Redis Cloud');
 }
 
-// ==========================================
-// 🛡️ MANEJO DE CIERRE ELEGANTE (Graceful Shutdown)
-// ==========================================
 const closeRedisConnection = async () => {
     if (redisClient.isOpen) {
-        console.log('🔴 Cerrando la conexión a Redis de forma segura...');
+        console.log('Cerrando la conexion de Redis...');
         await redisClient.quit();
     }
     process.exit(0);

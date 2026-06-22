@@ -26,7 +26,10 @@ export const createUserProfile = async (req, res) => {
 export const getUserProfile = async (req, res) => {
     try {
         const { id } = req.params;
-        const user = await userService.getUserById(id);
+        if (req.user.id !== id) {
+            return res.status(403).json({ message: "No puedes acceder a otro perfil" });
+        }
+        const user = await userService.getUserById(id, req.accessToken);
         
         console.log("🟢 EndPoint GET /api/users/:id (Obtener Perfil) funcionando bien");//Borrar despues de pruebas
         // Le devolvemos a React el objeto exacto
@@ -44,10 +47,13 @@ export const getUserProfile = async (req, res) => {
 export const updateUserProfile = async (req, res) => {
     try {
         const { id } = req.params;
+        if (req.user.id !== id) {
+            return res.status(403).json({ message: "No puedes editar otro perfil" });
+        }
         const updateData = req.body; // React ya manda name, username, bio, etc.
 
         // Actualizamos en la base de datos primero con los datos nuevos
-        const updatedUser = await userService.updateUser(id, updateData);
+        const updatedUser = await userService.updateUser(id, updateData, req.accessToken);
         // INVALIDACIÓN DE CACHÉ en Redis
         // Si la base de datos se actualizó con éxito, borramos la memoria vieja
         const cacheKey = `user:${id}:profile`;
