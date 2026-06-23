@@ -136,7 +136,7 @@ export const createUser = async (userData) => {
 };
 
 
-export const getUserById = async (id) => {
+export const getUserById = async (id, accessToken) => {
     //Definimos la llave para Redis
     const cacheKey = `user:${id}:profile`;
 
@@ -176,7 +176,10 @@ export const getUserById = async (id) => {
         const backendUrl = process.env.BACKEND_URL;
         const response = await fetch(`${backendUrl}/api/users/${id}`, {
             method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            }
         });
 
         if (!response.ok) {
@@ -228,18 +231,42 @@ export const updateUser = async (id, updateData) => {
 
 
 // Actualizar usuario PUT api/users/:id
-export const updateUser = async (id, updateData) => {
-    if (!mockDatabase[id]) {
-        throw new Error("USER_NOT_FOUND");
+export const updateUser = async (id, updateData, accessToken) => {
+    const useMock = process.env.USE_MOCK === 'true';
+
+    if (useMock) {
+        if (!mockDatabase[id]) {
+            throw new Error("USER_NOT_FOUND");
+        }
+
+        mockDatabase[id] = {
+            ...mockDatabase[id],
+            ...updateData
+        };
+
+        return mockDatabase[id];
     }
 
-    // Actualizamos fusionando los datos viejos con los nuevos
-    mockDatabase[id] = {
-        ...mockDatabase[id],
-        ...updateData
-    };
+    const backendUrl = process.env.BACKEND_URL;
+    const response = await fetch(`${backendUrl}/api/users/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(updateData)
+    });
 
-    return mockDatabase[id];
+    if (!response.ok) {
+        if (response.status === 404) {
+            throw new Error("USER_NOT_FOUND");
+        }
+
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al actualizar el usuario en Java");
+    }
+
+    return response.json();
 };
 
 

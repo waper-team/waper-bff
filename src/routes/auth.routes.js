@@ -8,7 +8,7 @@ const router = Router();
 // Endpoint: POST http://localhost:3000/api/auth/login
 router.post('/login', login);
 
-//router.use(verifyToken); // De aqui para abajo, todas las rutas requieren token válido (logout, protected, etc.)
+router.use(verifyToken);
 
 // Endpoint: POST http://localhost:3000/api/auth/logout
 router.post('/logout', logout);

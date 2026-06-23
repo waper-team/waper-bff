@@ -14,7 +14,7 @@ export const login = async (req, res) => {
             httpOnly: true, //protección contra XSS
             secure: process.env.NODE_ENV === 'production', 
             sameSite: 'strict', // Protección contra ataques CSRF
-            maxAge: 1000 * 60 * 60 * 24 // Expira en 1 día (en milisegundos)
+            maxAge: (data.expiresInSeconds || 3600) * 1000
         });
 
         // Le responde a React SOLO con los datos del usuario y el rol

@@ -10,8 +10,6 @@ export const verifyToken = async (req, res, next) => {
             return res.status(401).json({ message: "Acceso denegado. Token no proporcionado en las cookies." });
         }
 
-        console.log("🔍 Token recibido en el middleware:", token);
-
         //CONTROL DE REDIS: Verificar si el token está revocado (Lista Negra)
         const isBlacklisted = await redisClient.get(`blacklist:${token}`);
         if (isBlacklisted) {
@@ -23,6 +21,7 @@ export const verifyToken = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key_waper');
         
         req.user = decoded; //Contiene id y rol
+        req.accessToken = token;
         next();
 
     } catch (error) {
