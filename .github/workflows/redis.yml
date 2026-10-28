@@ -20,7 +20,7 @@ jobs:
 
       - name: Send write command to Redis
         env:
-          REDIS_URL: ${{ secrets.REDIS_URL }}
+          REDIS_URL: ${{ secrets.rediss }}
         run: |
           node -e "
             const Redis = require('ioredis');
