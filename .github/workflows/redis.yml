@@ -2,9 +2,8 @@ name: Keep Redis Alive
 
 on:
   schedule:
-    # Cada 7 días a las 00:00 
     - cron: '0 0 */7 * *'
-  workflow_dispatch: # Para ejecutarlo manualmente de GitHub
+  workflow_dispatch: # ejecución manual desde Github
 
 jobs:
   ping-redis:
@@ -15,25 +14,31 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install ioredis
-        run: npm install ioredis
+      - name: Install redis package
+        run: npm install redis
 
       - name: Send write command to Redis
         env:
           REDIS_URL: ${{ secrets.rediss }}
         run: |
           node -e "
-            const Redis = require('ioredis');
-            const redis = new Redis(process.env.REDIS_URL);
-            async function run() {
-              await redis.set('keepalive:timestamp', new Date().toISOString());
-              const val = await redis.get('keepalive:timestamp');
-              console.log('✅ Redis keepalive exitoso:', val);
-              await redis.quit();
-              process.exit(0);
-            }
-            run().catch(err => {
-              console.error('❌ Error al conectar a Redis:', err);
-              process.exit(1);
+            import('redis').then(async ({ createClient }) => {
+              const client = createClient({
+                url: process.env.REDIS_URL
+              });
+
+              client.on('error', err => console.error('❌ Redis Client Error', err));
+
+              try {
+                await client.connect();
+                await client.set('keepalive:timestamp', new Date().toISOString());
+                const val = await client.get('keepalive:timestamp');
+                console.log('✅ Redis keepalive exitoso:', val);
+                await client.quit();
+                process.exit(0);
+              } catch (err) {
+                console.error('❌ Error al conectar o ejecutar comando:', err);
+                process.exit(1);
+              }
             });
           "
