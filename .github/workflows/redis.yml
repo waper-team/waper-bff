@@ -1,0 +1,39 @@
+name: Keep Redis Alive
+
+on:
+  schedule:
+    # Cada 7 días a las 00:00 
+    - cron: '0 0 */7 * *'
+  workflow_dispatch: # Para ejecutarlo manualmente de GitHub
+
+jobs:
+  ping-redis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ioredis
+        run: npm install ioredis
+
+      - name: Send write command to Redis
+        env:
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+        run: |
+          node -e "
+            const Redis = require('ioredis');
+            const redis = new Redis(process.env.REDIS_URL);
+            async function run() {
+              await redis.set('keepalive:timestamp', new Date().toISOString());
+              const val = await redis.get('keepalive:timestamp');
+              console.log('✅ Redis keepalive exitoso:', val);
+              await redis.quit();
+              process.exit(0);
+            }
+            run().catch(err => {
+              console.error('❌ Error al conectar a Redis:', err);
+              process.exit(1);
+            });
+          "
