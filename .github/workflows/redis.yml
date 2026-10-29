@@ -1,0 +1,44 @@
+name: Keep Redis Alive
+
+on:
+  schedule:
+    - cron: '0 0 */7 * *'
+  workflow_dispatch: # ejecución manual desde Github
+
+jobs:
+  ping-redis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install redis package
+        run: npm install redis
+
+      - name: Send write command to Redis
+        env:
+          REDIS_URL: ${{ secrets.rediss }}
+        run: |
+          node -e "
+            import('redis').then(async ({ createClient }) => {
+              const client = createClient({
+                url: process.env.REDIS_URL
+              });
+
+              client.on('error', err => console.error('❌ Redis Client Error', err));
+
+              try {
+                await client.connect();
+                await client.set('keepalive:timestamp', new Date().toISOString());
+                const val = await client.get('keepalive:timestamp');
+                console.log('✅ Redis keepalive exitoso:', val);
+                await client.quit();
+                process.exit(0);
+              } catch (err) {
+                console.error('❌ Error al conectar o ejecutar comando:', err);
+                process.exit(1);
+              }
+            });
+          "
